@@ -14,6 +14,7 @@ class MainActivity : AppCompatActivity() {
     private var selectedCell: Pair<Int, Int>? = null
     private var isWhiteTurn = true
     private var gameOver = false
+    private val highlightedCells = mutableListOf<Pair<Int, Int>>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,8 +31,8 @@ class MainActivity : AppCompatActivity() {
                     columnSpec = GridLayout.spec(col, 1f)
                 }
                 button.setBackgroundColor(
-                    if ((row + col) % 2 == 0) Color.parseColor("#C8E6C9") // Light green
-                    else Color.parseColor("#4CAF50") // Dark green
+                    if ((row + col) % 2 == 0) Color.parseColor("#C8E6C9")
+                    else Color.parseColor("#4CAF50")
                 )
                 grid.addView(button)
                 button.setOnClickListener {
@@ -46,6 +47,10 @@ class MainActivity : AppCompatActivity() {
         drawBoard()
     }
 
+    private fun isCorrectTurn(piece: String): Boolean {
+        return (isWhiteTurn && isWhitePiece(piece)) || (!isWhiteTurn && isBlackPiece(piece))
+    }
+
     private fun onCellClick(row: Int, col: Int) {
         if (gameOver) return
 
@@ -54,7 +59,7 @@ class MainActivity : AppCompatActivity() {
         if (selectedCell == null) {
             if (piece.isNotEmpty() && isCorrectTurn(piece)) {
                 selectedCell = Pair(row, col)
-                board[row][col].setBackgroundColor(Color.YELLOW)
+                showValidMoves(piece, row, col)
             }
         } else {
             val (fromRow, fromCol) = selectedCell!!
@@ -65,7 +70,6 @@ class MainActivity : AppCompatActivity() {
                 pieceBoard[row][col] = movingPiece
                 pieceBoard[fromRow][fromCol] = ""
 
-                // Check if a King was captured
                 if (capturedPiece == "♔") {
                     Toast.makeText(this, "Black wins! 🏁", Toast.LENGTH_LONG).show()
                     gameOver = true
@@ -85,29 +89,50 @@ class MainActivity : AppCompatActivity() {
             }
 
             selectedCell = null
+            highlightedCells.clear()
             drawBoard()
         }
     }
 
-    private fun isCorrectTurn(piece: String): Boolean {
-        return (isWhitePiece(piece) && isWhiteTurn) || (isBlackPiece(piece) && !isWhiteTurn)
+    private fun showValidMoves(piece: String, fromRow: Int, fromCol: Int) {
+        highlightedCells.clear()
+
+        for (toRow in 0..7) {
+            for (toCol in 0..7) {
+                if (isValidMove(piece, fromRow, fromCol, toRow, toCol)) {
+                    highlightedCells.add(Pair(toRow, toCol))
+                }
+            }
+        }
+
+        drawBoard()
+
+        board[fromRow][fromCol].setBackgroundColor(Color.YELLOW)
+        for ((r, c) in highlightedCells) {
+            board[r][c].setBackgroundColor(Color.parseColor("#FFEB3B")) // Yellow highlight
+        }
     }
-    // this is a test comment
+
     private fun drawBoard() {
         for (row in 0..7) {
             for (col in 0..7) {
                 val piece = pieceBoard[row][col]
                 board[row][col].text = piece
 
-                // Set square color
-                board[row][col].setBackgroundColor(
-                    if ((row + col) % 2 == 0)
-                        Color.parseColor("#C8E6C9") // light green
-                    else
-                        Color.parseColor("#4CAF50") // green
-                )
+                // Set default square color
+                val baseColor = if ((row + col) % 2 == 0)
+                    Color.parseColor("#C8E6C9")
+                else
+                    Color.parseColor("#4CAF50")
 
-                // Set text color based on piece color
+                board[row][col].setBackgroundColor(baseColor)
+
+                // If in highlighted cells, show possible move
+                if (highlightedCells.contains(Pair(row, col))) {
+                    board[row][col].setBackgroundColor(Color.parseColor("#FFEB3B"))
+                }
+
+                // Set text color
                 board[row][col].setTextColor(
                     when {
                         isWhitePiece(piece) -> Color.WHITE
@@ -119,25 +144,21 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-
     private fun setupInitialPieces() {
         val whitePieces = arrayOf("♖", "♘", "♗", "♕", "♔", "♗", "♘", "♖")
         val blackPieces = arrayOf("♜", "♞", "♝", "♛", "♚", "♝", "♞", "♜")
 
-        // Black
         for (i in 0..7) {
             pieceBoard[0][i] = blackPieces[i]
             pieceBoard[1][i] = "♟"
-        }
-
-        // White
-        for (i in 0..7) {
             pieceBoard[6][i] = "♙"
             pieceBoard[7][i] = whitePieces[i]
         }
     }
 
     private fun isValidMove(piece: String, fromRow: Int, fromCol: Int, toRow: Int, toCol: Int): Boolean {
+        if (fromRow == toRow && fromCol == toCol) return false
+
         val dx = toCol - fromCol
         val dy = toRow - fromRow
         val target = pieceBoard[toRow][toCol]
@@ -146,9 +167,11 @@ class MainActivity : AppCompatActivity() {
         if (isBlackPiece(piece) && isBlackPiece(target)) return false
 
         return when (piece) {
-            "♙" -> dy == -1 && dx == 0 && target == "" || dy == -2 && fromRow == 6 && dx == 0 && target == "" ||
+            "♙" -> dy == -1 && dx == 0 && target == "" ||
+                    dy == -2 && fromRow == 6 && dx == 0 && pieceBoard[fromRow - 1][fromCol] == "" && target == "" ||
                     dy == -1 && Math.abs(dx) == 1 && isBlackPiece(target)
-            "♟" -> dy == 1 && dx == 0 && target == "" || dy == 2 && fromRow == 1 && dx == 0 && target == "" ||
+            "♟" -> dy == 1 && dx == 0 && target == "" ||
+                    dy == 2 && fromRow == 1 && dx == 0 && pieceBoard[fromRow + 1][fromCol] == "" && target == "" ||
                     dy == 1 && Math.abs(dx) == 1 && isWhitePiece(target)
             "♖", "♜" -> isClearPath(fromRow, fromCol, toRow, toCol) && (dx == 0 || dy == 0)
             "♗", "♝" -> isClearPath(fromRow, fromCol, toRow, toCol) && Math.abs(dx) == Math.abs(dy)
