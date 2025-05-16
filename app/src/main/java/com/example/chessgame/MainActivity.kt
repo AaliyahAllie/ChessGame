@@ -36,7 +36,12 @@ class MainActivity : AppCompatActivity() {
                 )
                 grid.addView(button)
                 button.setOnClickListener {
-                    onCellClick(row, col)
+                    try {
+                        onCellClick(row, col)
+                    } catch (e: Exception) {
+                        Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                        e.printStackTrace()
+                    }
                 }
                 button
             }
@@ -119,7 +124,6 @@ class MainActivity : AppCompatActivity() {
                 val piece = pieceBoard[row][col]
                 board[row][col].text = piece
 
-                // Set default square color
                 val baseColor = if ((row + col) % 2 == 0)
                     Color.parseColor("#C8E6C9")
                 else
@@ -127,12 +131,10 @@ class MainActivity : AppCompatActivity() {
 
                 board[row][col].setBackgroundColor(baseColor)
 
-                // If in highlighted cells, show possible move
                 if (highlightedCells.contains(Pair(row, col))) {
                     board[row][col].setBackgroundColor(Color.parseColor("#FFEB3B"))
                 }
 
-                // Set text color
                 board[row][col].setTextColor(
                     when {
                         isWhitePiece(piece) -> Color.WHITE
@@ -190,6 +192,7 @@ class MainActivity : AppCompatActivity() {
         var y = fromRow + dy
 
         while (x != toCol || y != toRow) {
+            if (x !in 0..7 || y !in 0..7) return false
             if (pieceBoard[y][x].isNotEmpty()) return false
             x += dx
             y += dy
