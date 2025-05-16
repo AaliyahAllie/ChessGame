@@ -92,7 +92,7 @@ class MainActivity : AppCompatActivity() {
     private fun isCorrectTurn(piece: String): Boolean {
         return (isWhitePiece(piece) && isWhiteTurn) || (isBlackPiece(piece) && !isWhiteTurn)
     }
-
+    // this is a test comment
     private fun drawBoard() {
         for (row in 0..7) {
             for (col in 0..7) {
